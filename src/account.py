@@ -19,9 +19,17 @@ class Account:
         self.pesel = pesel
         self.promo_code = promo_code
 
+        if len(pesel) == 11:
+            birth_year_prefix = pesel[0:2]
+            is_born_in_60s = "60" <= birth_year_prefix <= "69"
+
+        else:
+            is_born_in_60s = False
+
         if (
             self.promo_code is not None
             and self.promo_code.startswith("PROM_")
             and len(self.promo_code) == 8
+            and is_born_in_60s
         ):
             self.balance += 50

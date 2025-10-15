@@ -15,9 +15,14 @@ class TestAccount:
         assert account.pesel.isdigit()
 
     def test_account_promo_code(self):
-        account = Account("John", "Doe", 0.0, "06241114012", "PROM_123")
+        account = Account("John", "Doe", 0.0, "60241114012", "PROM_123")
         assert account.promo_code == "PROM_123"
         assert account.balance == 50.0, "Balance must be 50.0"
+
+    def test_account_promo_code_2(self):
+        account = Account("John", "Doe", 0.0, "06241114012", "PROM_123")
+        assert account.promo_code == "PROM_123"
+        assert account.balance == 0.0, "Balance must be 0.0"
 
     def test_account_promo_code_none(self):
         account = Account("John", "Doe", 0.0, "06241114012")
