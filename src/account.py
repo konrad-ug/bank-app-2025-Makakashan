@@ -2,27 +2,31 @@ class Account:
     balance: float
     express_transfer_fee: float = 0.0
 
-    def __init__(
-        self,
-        balance: float,
-    ):
+    def __init__(self, balance: float):
         self.balance = balance
+        self.historia = []
 
     def incoming_transfer(self, amount: float):
         if amount > 0:
             self.balance += amount
+            self.historia.append(amount)
 
     def outgoing_transfer(self, amount: float):
         if 0 < amount <= self.balance:
             self.balance -= amount
+            self.historia.append(-amount)
 
     def express_transfer(self, amount: float):
         if 0 < amount <= self.balance:
             total_charge = amount + self.express_transfer_fee
             self.balance -= total_charge
+            self.historia.append(-amount)
+            self.historia.append(-self.express_transfer_fee)
 
         elif amount > 0 and self.balance == amount:
             self.balance -= amount + self.express_transfer_fee
+            self.historia.append(-amount)
+            self.historia.append(-self.express_transfer_fee)
 
 
 class PersonalAccount(Account):
@@ -59,6 +63,7 @@ class PersonalAccount(Account):
             and is_born_in_60s
         ):
             self.balance += 50
+            self.historia.append(50)
 
 
 class BusinessAccount(Account):
@@ -66,12 +71,7 @@ class BusinessAccount(Account):
     nip: str
     express_transfer_fee: float = 5.0
 
-    def __init__(
-        self,
-        company_name: str,
-        nip: str,
-        promo_code: str | None = None,
-    ):
+    def __init__(self, company_name: str, nip: str, promo_code: str | None = None):
         super().__init__(balance=0.0)
         self.company_name = company_name
 
