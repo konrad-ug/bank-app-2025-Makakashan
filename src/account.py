@@ -103,3 +103,15 @@ class BusinessAccount(Account):
             self.nip = nip
         else:
             self.nip = "Invalid"
+
+    def take_loan(self, amount: float) -> bool:
+        condition_1 = self.balance >= (amount * 2)
+
+        condition_2 = -1775 in self.historia
+
+        if condition_1 and condition_2:
+            self.balance += amount
+            self.historia.append(amount)
+            return True
+        else:
+            return False
