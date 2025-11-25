@@ -65,6 +65,30 @@ class PersonalAccount(Account):
             self.balance += 50
             self.historia.append(50)
 
+    def _check_loan_condition_1(self) -> bool:
+        if len(self.historia) < 3:
+            return False
+        last_three = self.historia[-3:]
+        return all(t > 0 for t in last_three)
+
+    def _check_loan_condition_2(self, amount: float) -> bool:
+        if len(self.historia) < 5:
+            return False
+        sum_last_five = sum(self.historia[-5:])
+        return sum_last_five > amount
+
+    def submit_for_loan(self, amount: float) -> bool:
+        is_granted = self._check_loan_condition_1() or self._check_loan_condition_2(
+            amount
+        )
+
+        if is_granted:
+            self.balance += amount
+            self.historia.append(amount)
+            return True
+        else:
+            return False
+
 
 class BusinessAccount(Account):
     company_name: str
