@@ -1,4 +1,5 @@
 pytest==8.4.2
+pytest-mock
 flask
 requests
 coverage
