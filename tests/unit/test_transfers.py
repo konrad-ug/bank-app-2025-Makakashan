@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from src.account import BusinessAccount, PersonalAccount
@@ -10,9 +12,15 @@ def personal_account():
 
 @pytest.fixture
 def business_account():
-    account = BusinessAccount("Test Corp", "1234567890")
-    account.balance = 100.0
-    return account
+    with patch("src.account.requests.get") as mock_get:
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "result": {"subject": {"nip": "1234567890", "statusVat": "Czynny"}}
+        }
+        account = BusinessAccount("Test Corp", "1234567890")
+        account.balance = 100.0
+        return account
 
 
 def test_incoming_transfer(personal_account):

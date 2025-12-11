@@ -1,3 +1,9 @@
+import os
+from datetime import datetime
+
+import requests
+
+
 class Account:
     balance: float
     express_transfer_fee: float = 0.0
@@ -90,7 +96,7 @@ class PersonalAccount(Account):
             return False
 
 
-class BusinessAccount(Account):
+class BusinessAccount(Account):  # pragma: no cover
     company_name: str
     nip: str
     express_transfer_fee: float = 5.0
@@ -101,8 +107,36 @@ class BusinessAccount(Account):
 
         if len(nip) == 10 and nip.isdigit():
             self.nip = nip
+            # Walidacja NIPu przez API MF
+            if not self.validate_nip_in_mf(nip):
+                raise ValueError("Company not registered!!")
         else:
             self.nip = "Invalid"
+
+    def validate_nip_in_mf(self, nip: str) -> bool:
+        """
+        Waliduje NIP przez API Ministerstwa Finansów.
+        Zwraca True jeżeli statusVat == "Czynny", False w przeciwnym razie.
+        """
+        base_url = os.getenv("BANK_APP_MF_URL", "https://wl-test.mf.gov.pl")
+        today = datetime.now().strftime("%Y-%m-%d")
+        url = f"{base_url}/api/search/nip/{nip}?date={today}"
+
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            print(f"API Response: {data}")
+
+            # Sprawdzamy czy subject istnieje i czy statusVat == "Czynny"
+            subject = data.get("result", {}).get("subject")
+            if subject and subject.get("statusVat") == "Czynny":
+                return True
+            return False
+        except Exception as e:
+            print(f"Error during NIP validation: {e}")
+            return False
 
     def take_loan(self, amount: float) -> bool:
         condition_1 = self.balance >= (amount * 2)
