@@ -1,11 +1,22 @@
 from .account import PersonalAccount  # [cite: 38]
 
 
+class DuplicatePeselError(Exception):
+    """Exception raised when attempting to add account with duplicate PESEL"""
+
+    def __init__(self, pesel: str):
+        self.pesel = pesel
+        super().__init__(f"Account with PESEL {pesel} already exists")
+
+
 class AccountRegistry:
     def __init__(self):
         self.accounts: list[PersonalAccount] = []
 
     def add_account(self, account: PersonalAccount):
+        # Check if account with this PESEL already exists
+        if self.find_account_by_pesel(account.pesel) is not None:
+            raise DuplicatePeselError(account.pesel)
         self.accounts.append(account)
 
     def find_account_by_pesel(self, pesel: str) -> PersonalAccount | None:
