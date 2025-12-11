@@ -308,6 +308,404 @@ class TestAccountCRUD(unittest.TestCase):
         response3 = self.client.get(f"/api/accounts/{pesel3}")
         self.assertEqual(response3.status_code, 200)
 
+    # PESEL uniqueness tests (Feature 16)
+    def test_create_account_with_duplicate_pesel_returns_409(self):
+        """Test that creating account with duplicate PESEL returns 409 Conflict"""
+        pesel = "89092909825"
+
+        # Create first account
+        response1 = self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+        self.assertEqual(response1.status_code, 201)
+
+        # Try to create second account with same PESEL
+        response2 = self.client.post(
+            "/api/accounts",
+            json={"name": "Lars", "surname": "Ulrich", "pesel": pesel},
+        )
+        self.assertEqual(response2.status_code, 409)
+        self.assertIn("error", response2.json)
+        self.assertIn(pesel, response2.json["error"])
+        self.assertIn("already exists", response2.json["error"])
+
+    def test_duplicate_pesel_does_not_create_account(self):
+        """Test that duplicate PESEL attempt doesn't add account to registry"""
+        pesel = "88050512345"
+
+        # Create first account
+        self.client.post(
+            "/api/accounts", json={"name": "John", "surname": "Doe", "pesel": pesel}
+        )
+
+        # Verify count is 1
+        count_response = self.client.get("/api/accounts/count")
+        self.assertEqual(count_response.json["count"], 1)
+
+        # Try to create duplicate
+        self.client.post(
+            "/api/accounts", json={"name": "Jane", "surname": "Smith", "pesel": pesel}
+        )
+
+        # Count should still be 1
+        count_response = self.client.get("/api/accounts/count")
+        self.assertEqual(count_response.json["count"], 1)
+
+        # Original account should be unchanged
+        response = self.client.get(f"/api/accounts/{pesel}")
+        self.assertEqual(response.json["name"], "John")
+        self.assertEqual(response.json["surname"], "Doe")
+
+    def test_different_pesels_can_create_multiple_accounts(self):
+        """Test that different PESELs can create multiple accounts"""
+        # Create accounts with different PESELs
+        response1 = self.client.post(
+            "/api/accounts",
+            json={"name": "Alice", "surname": "Smith", "pesel": "85010112345"},
+        )
+        self.assertEqual(response1.status_code, 201)
+
+        response2 = self.client.post(
+            "/api/accounts",
+            json={"name": "Bob", "surname": "Jones", "pesel": "86020212345"},
+        )
+        self.assertEqual(response2.status_code, 201)
+
+        response3 = self.client.post(
+            "/api/accounts",
+            json={"name": "Charlie", "surname": "Brown", "pesel": "87030312345"},
+        )
+        self.assertEqual(response3.status_code, 201)
+
+        # All should succeed
+        count_response = self.client.get("/api/accounts/count")
+        self.assertEqual(count_response.json["count"], 3)
+
+    def test_delete_and_recreate_with_same_pesel_succeeds(self):
+        """Test that after deleting account, same PESEL can be used again"""
+        pesel = "89092909825"
+
+        # Create account
+        response1 = self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+        self.assertEqual(response1.status_code, 201)
+
+        # Delete account
+        delete_response = self.client.delete(f"/api/accounts/{pesel}")
+        self.assertEqual(delete_response.status_code, 200)
+
+        # Create new account with same PESEL - should succeed
+        response2 = self.client.post(
+            "/api/accounts",
+            json={"name": "Lars", "surname": "Ulrich", "pesel": pesel},
+        )
+        self.assertEqual(response2.status_code, 201)
+
+        # Verify new account exists
+        get_response = self.client.get(f"/api/accounts/{pesel}")
+        self.assertEqual(get_response.status_code, 200)
+        self.assertEqual(get_response.json["name"], "Lars")
+        self.assertEqual(get_response.json["surname"], "Ulrich")
+
+    def test_multiple_duplicate_attempts_all_return_409(self):
+        """Test that multiple attempts to create duplicate PESEL all return 409"""
+        pesel = "90010112345"
+
+        # Create first account
+        response1 = self.client.post(
+            "/api/accounts", json={"name": "First", "surname": "User", "pesel": pesel}
+        )
+        self.assertEqual(response1.status_code, 201)
+
+        # Try to create duplicates multiple times
+        for i in range(3):
+            response = self.client.post(
+                "/api/accounts",
+                json={"name": f"User{i}", "surname": f"Duplicate{i}", "pesel": pesel},
+            )
+            self.assertEqual(response.status_code, 409)
+            self.assertIn("error", response.json)
+
+        # Only one account should exist
+        count_response = self.client.get("/api/accounts/count")
+        self.assertEqual(count_response.json["count"], 1)
+
+    # Transfer tests (Feature 17)
+    def test_incoming_transfer_success(self):
+        """Test successful incoming transfer"""
+        pesel = "89092909825"
+        # Create account with initial balance
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Perform incoming transfer
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer",
+            json={"amount": 500, "type": "incoming"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json, {"message": "Zlecenie przyjęto do realizacji"})
+
+        # Verify balance increased
+        account_response = self.client.get(f"/api/accounts/{pesel}")
+        self.assertEqual(account_response.json["balance"], 500.0)
+
+    def test_outgoing_transfer_success(self):
+        """Test successful outgoing transfer with sufficient funds"""
+        pesel = "89092909825"
+        # Create account
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Add funds first
+        self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 1000, "type": "incoming"}
+        )
+
+        # Perform outgoing transfer
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer",
+            json={"amount": 300, "type": "outgoing"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json, {"message": "Zlecenie przyjęto do realizacji"})
+
+        # Verify balance decreased
+        account_response = self.client.get(f"/api/accounts/{pesel}")
+        self.assertEqual(account_response.json["balance"], 700.0)
+
+    def test_express_transfer_success(self):
+        """Test successful express transfer with sufficient funds"""
+        pesel = "89092909825"
+        # Create account
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Add funds first
+        self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 1000, "type": "incoming"}
+        )
+
+        # Perform express transfer (fee is 1.0 for PersonalAccount)
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer",
+            json={"amount": 300, "type": "express"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json, {"message": "Zlecenie przyjęto do realizacji"})
+
+        # Verify balance decreased by amount + fee
+        account_response = self.client.get(f"/api/accounts/{pesel}")
+        self.assertEqual(account_response.json["balance"], 699.0)  # 1000 - 300 - 1
+
+    def test_outgoing_transfer_insufficient_funds(self):
+        """Test outgoing transfer fails with insufficient funds (422)"""
+        pesel = "89092909825"
+        # Create account with 0 balance
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Try outgoing transfer without funds
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer",
+            json={"amount": 100, "type": "outgoing"},
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("error", response.json)
+        self.assertIn("Insufficient funds", response.json["error"])
+
+    def test_express_transfer_insufficient_funds(self):
+        """Test express transfer fails with insufficient funds (422)"""
+        pesel = "89092909825"
+        # Create account and add some funds (but not enough for express + fee)
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+        self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 50, "type": "incoming"}
+        )
+
+        # Try express transfer that would need 100 + 1 (fee) = 101
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer",
+            json={"amount": 100, "type": "express"},
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("error", response.json)
+
+    def test_transfer_account_not_found(self):
+        """Test transfer returns 404 when account doesn't exist"""
+        response = self.client.post(
+            "/api/accounts/99999999999/transfer",
+            json={"amount": 100, "type": "incoming"},
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("error", response.json)
+        self.assertIn("Account not found", response.json["error"])
+
+    def test_transfer_invalid_type(self):
+        """Test transfer returns 400 for invalid transfer type"""
+        pesel = "89092909825"
+        # Create account
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Try invalid transfer type
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer",
+            json={"amount": 100, "type": "invalid_type"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json)
+        self.assertIn("Invalid transfer type", response.json["error"])
+
+    def test_transfer_negative_amount(self):
+        """Test transfer returns 400 for negative amount"""
+        pesel = "89092909825"
+        # Create account
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Try negative amount
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer",
+            json={"amount": -100, "type": "incoming"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json)
+        self.assertIn("positive number", response.json["error"])
+
+    def test_transfer_zero_amount(self):
+        """Test transfer returns 400 for zero amount"""
+        pesel = "89092909825"
+        # Create account
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Try zero amount
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 0, "type": "incoming"}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json)
+
+    def test_transfer_missing_amount(self):
+        """Test transfer returns 400 when amount is missing"""
+        pesel = "89092909825"
+        # Create account
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Try without amount field
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"type": "incoming"}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json)
+        self.assertIn("Missing required fields", response.json["error"])
+
+    def test_transfer_missing_type(self):
+        """Test transfer returns 400 when type is missing"""
+        pesel = "89092909825"
+        # Create account
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Try without type field
+        response = self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 100}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.json)
+        self.assertIn("Missing required fields", response.json["error"])
+
+    def test_transfer_multiple_operations(self):
+        """Test multiple transfers and verify balance changes"""
+        pesel = "89092909825"
+        # Create account
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Incoming transfer 1000
+        self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 1000, "type": "incoming"}
+        )
+
+        # Outgoing transfer 200
+        self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 200, "type": "outgoing"}
+        )
+
+        # Express transfer 100 (fee = 1)
+        self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 100, "type": "express"}
+        )
+
+        # Incoming transfer 500
+        self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 500, "type": "incoming"}
+        )
+
+        # Verify final balance: 1000 - 200 - 100 - 1 + 500 = 1199
+        account_response = self.client.get(f"/api/accounts/{pesel}")
+        self.assertEqual(account_response.json["balance"], 1199.0)
+
+    def test_transfer_all_types_validation(self):
+        """Test all three transfer types work correctly"""
+        pesel = "89092909825"
+        # Create account
+        self.client.post(
+            "/api/accounts",
+            json={"name": "James", "surname": "Hetfield", "pesel": pesel},
+        )
+
+        # Test incoming
+        response1 = self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 1000, "type": "incoming"}
+        )
+        self.assertEqual(response1.status_code, 200)
+
+        # Test outgoing
+        response2 = self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 300, "type": "outgoing"}
+        )
+        self.assertEqual(response2.status_code, 200)
+
+        # Test express
+        response3 = self.client.post(
+            f"/api/accounts/{pesel}/transfer", json={"amount": 200, "type": "express"}
+        )
+        self.assertEqual(response3.status_code, 200)
+
+        # All should return success message
+        self.assertEqual(response1.json["message"], "Zlecenie przyjęto do realizacji")
+        self.assertEqual(response2.json["message"], "Zlecenie przyjęto do realizacji")
+        self.assertEqual(response3.json["message"], "Zlecenie przyjęto do realizacji")
+
 
 if __name__ == "__main__":
     unittest.main()
