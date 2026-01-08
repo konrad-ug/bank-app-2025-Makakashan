@@ -3,6 +3,8 @@ from datetime import datetime
 
 import requests
 
+from src.smtp import SMTPClient
+
 
 class Account:
     balance: float
@@ -95,6 +97,23 @@ class PersonalAccount(Account):
         else:
             return False
 
+    def send_history_via_email(self, email_address: str) -> bool:
+        """
+        Send account history via email.
+
+        Args:
+            email_address: Recipient email address
+
+        Returns:
+            True if email was sent successfully, False otherwise
+        """
+        today = datetime.now().strftime("%Y-%m-%d")
+        subject = f"Account Transfer History {today}"
+        text = f"Personal account history: {self.historia}"
+
+        smtp_client = SMTPClient()
+        return smtp_client.send(subject, text, email_address)
+
 
 class BusinessAccount(Account):  # pragma: no cover
     company_name: str
@@ -149,3 +168,20 @@ class BusinessAccount(Account):  # pragma: no cover
             return True
         else:
             return False
+
+    def send_history_via_email(self, email_address: str) -> bool:
+        """
+        Send account history via email.
+
+        Args:
+            email_address: Recipient email address
+
+        Returns:
+            True if email was sent successfully, False otherwise
+        """
+        today = datetime.now().strftime("%Y-%m-%d")
+        subject = f"Account Transfer History {today}"
+        text = f"Company account history: {self.historia}"
+
+        smtp_client = SMTPClient()
+        return smtp_client.send(subject, text, email_address)
