@@ -1,6 +1,16 @@
+import os
+
 import pytest
 
+try:
+    from pymongo import MongoClient as PyMongoClient
+except Exception:  # pragma: no cover - optional dependency
+    PyMongoClient = None
+
+from mongomock import MongoClient as MockMongoClient
+
 from app.api import app, registry
+from src.repositories.mongo_repository import MongoAccountsRepository
 
 
 @pytest.fixture
@@ -12,9 +22,55 @@ def client():
 
 @pytest.fixture(autouse=True)
 def clear_registry():
-    registry.accounts.clear()
+    registry.clear_all_accounts()
     yield
-    registry.accounts.clear()
+    registry.clear_all_accounts()
+
+
+@pytest.fixture
+def mongo_repository_factory():
+    mongo_uri = os.getenv("API_TEST_MONGO_URI")
+    db_name = os.getenv("API_TEST_MONGO_DB_NAME", "bank_app_api_tests")
+    collection_name = os.getenv("API_TEST_MONGO_COLLECTION", "accounts_api_tests")
+
+    use_real_mongo = bool(mongo_uri)
+    if use_real_mongo:
+        if PyMongoClient is None:
+            pytest.skip(
+                "pymongo is required to run API tests against a real Mongo instance"
+            )
+        client = PyMongoClient(mongo_uri)
+    else:
+        client = MockMongoClient()
+
+    repo_kwargs = {
+        "client": client,
+        "database_name": db_name,
+        "collection_name": collection_name,
+    }
+    repo = MongoAccountsRepository(**repo_kwargs)
+    repo.clear()
+
+    def factory(**_kwargs):
+        return MongoAccountsRepository(**repo_kwargs)
+
+    if not use_real_mongo:
+        app.config["ACCOUNTS_REPOSITORY_FACTORY"] = factory
+    app.config["PERSISTENCE_CONFIG"] = {
+        "connection_string": mongo_uri if use_real_mongo else "mock",
+        "database_name": db_name,
+        "collection_name": collection_name,
+    }
+
+    try:
+        yield repo
+    finally:
+        repo.clear()
+        close_fn = getattr(client, "close", None)
+        if callable(close_fn):
+            close_fn()
+        app.config.pop("ACCOUNTS_REPOSITORY_FACTORY", None)
+        app.config.pop("PERSISTENCE_CONFIG", None)
 
 
 def test_create_account(client):
@@ -362,6 +418,51 @@ def test_delete_and_recreate_with_same_pesel_succeeds(client):
     get_response = client.get(f"/api/accounts/{pesel}")
     assert get_response.json["name"] == "Lars"
     assert get_response.json["surname"] == "Ulrich"
+
+
+def test_save_accounts_to_persistence(client, mongo_repository_factory):
+    client.post(
+        "/api/accounts",
+        json={"name": "Alice", "surname": "Smith", "pesel": "85010112345"},
+    )
+    client.post(
+        "/api/accounts",
+        json={"name": "Bob", "surname": "Jones", "pesel": "86020212345"},
+    )
+
+    response = client.post("/api/accounts/save")
+    assert response.status_code == 200
+    assert response.json["message"] == "Accounts saved to MongoDB"
+    assert response.json["count"] == 2
+    assert mongo_repository_factory.count() == 2
+
+
+def test_load_accounts_from_persistence_replaces_registry(
+    client, mongo_repository_factory
+):
+    pesel1 = "85010112345"
+    pesel2 = "86020212345"
+
+    client.post(
+        "/api/accounts",
+        json={"name": "Alice", "surname": "Smith", "pesel": pesel1},
+    )
+    client.post(
+        "/api/accounts",
+        json={"name": "Bob", "surname": "Jones", "pesel": pesel2},
+    )
+    client.post("/api/accounts/save")
+
+    registry.clear_all_accounts()
+    load_response = client.post("/api/accounts/load")
+    assert load_response.status_code == 200
+    assert load_response.json["message"] == "Accounts loaded from MongoDB"
+    assert load_response.json["count"] == 2
+
+    accounts_response = client.get("/api/accounts")
+    assert accounts_response.status_code == 200
+    assert len(accounts_response.json) == 2
+    assert {pesel1, pesel2} == {acc["pesel"] for acc in accounts_response.json}
 
 
 # ============================================================================

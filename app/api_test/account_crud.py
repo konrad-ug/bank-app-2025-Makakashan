@@ -16,12 +16,12 @@ class TestAccountCRUD(unittest.TestCase):
         app.config["TESTING"] = True
         self.client = app.test_client()
         # Clear registry before each test to ensure independence
-        registry.accounts.clear()
+        registry.clear_all_accounts()
 
     def tearDown(self):
         """Clean up after each test"""
         # Clear registry after each test
-        registry.accounts.clear()
+        registry.clear_all_accounts()
 
     # CREATE tests
     def test_create_account(self):
