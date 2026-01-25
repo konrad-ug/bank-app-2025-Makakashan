@@ -9,6 +9,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      FLASK_APP: app/api.py
+      FLASK_ENV: development
+      PYTHONPATH: ${{ github.workspace }}
+      API_TEST_MONGO_URI: mongodb://localhost:27017/
+      API_TEST_MONGO_DB_NAME: gha_api_tests
+      API_TEST_MONGO_COLLECTION: gha_accounts
+      MONGO_URI: mongodb://localhost:27017/
+      MONGO_DB_NAME: gha_api_tests
+      MONGO_COLLECTION_NAME: gha_accounts
 
     steps:
       - name: Checkout code
@@ -24,19 +34,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Start Flask
+      - name: Start MongoDB with Docker Compose
         run: |
-          export FLASK_APP=app/api.py
-          export FLASK_ENV=development
-          export PYTHONPATH=$GITHUB_WORKSPACE
-          flask run &
+          docker compose -f mongo.yml up -d
+          sleep 10
+
+      - name: Start Flask in background
+        run: |
+          flask run --host=0.0.0.0 --port=5000 &
+          echo $! > flask.pid
           sleep 5
 
       - name: Execute API tests
         run: |
           python3 -m pytest tests/api -v
 
-      - name: Stop Flask
+      - name: Stop services
         if: always()
         run: |
-          pkill -f flask || true
+          if [ -f flask.pid ]; then
+            kill $(cat flask.pid) || true
+            rm flask.pid
+          else
+            pkill -f "flask run" || true
+          fi
+          docker compose -f mongo.yml down || true
