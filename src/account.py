@@ -31,11 +31,6 @@ class Account:
             self.historia.append(-amount)
             self.historia.append(-self.express_transfer_fee)
 
-        elif amount > 0 and self.balance == amount:
-            self.balance -= amount + self.express_transfer_fee
-            self.historia.append(-amount)
-            self.historia.append(-self.express_transfer_fee)
-
 
 class PersonalAccount(Account):
     first_name: str
@@ -115,7 +110,7 @@ class PersonalAccount(Account):
         return smtp_client.send(subject, text, email_address)
 
 
-class BusinessAccount(Account):  # pragma: no cover
+class BusinessAccount(Account):
     company_name: str
     nip: str
     express_transfer_fee: float = 5.0
@@ -146,15 +141,12 @@ class BusinessAccount(Account):  # pragma: no cover
             response.raise_for_status()
             data = response.json()
 
-            print(f"API Response: {data}")
-
             # Sprawdzamy czy subject istnieje i czy statusVat == "Czynny"
             subject = data.get("result", {}).get("subject")
             if subject and subject.get("statusVat") == "Czynny":
                 return True
             return False
-        except Exception as e:
-            print(f"Error during NIP validation: {e}")
+        except Exception:
             return False
 
     def take_loan(self, amount: float) -> bool:

@@ -1,0 +1,23 @@
+{
+  "name": "bank-app-2025-makakashan",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konrad-ug/bank-app-2025-Makakashan.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/konrad-ug/bank-app-2025-Makakashan/issues"
+  },
+  "homepage": "https://github.com/konrad-ug/bank-app-2025-Makakashan#readme",
+  "devDependencies": {}
+}

@@ -26,9 +26,8 @@ def test_create_and_delete_account_100_times(api_url):
     pesel_base = "90010112345"
 
     for i in range(100):
-        pesel = f"{i:011d}"  # Generate unique PESEL for each iteration
+        pesel = f"{i:011d}"
 
-        # Create account
         start_time = time.time()
         create_response = requests.post(
             f"{api_url}/api/accounts",
@@ -40,7 +39,6 @@ def test_create_and_delete_account_100_times(api_url):
         assert create_response.status_code == 201, f"Create failed at iteration {i}"
         assert create_time < TIMEOUT, f"Create took {create_time:.3f}s (iteration {i})"
 
-        # Delete account
         start_time = time.time()
         delete_response = requests.delete(
             f"{api_url}/api/accounts/{pesel}", timeout=TIMEOUT
@@ -61,7 +59,6 @@ def test_create_account_and_100_incoming_transfers(api_url):
     transfer_amount = 100.0
     expected_balance = transfer_amount * 100
 
-    # Create account
     start_time = time.time()
     create_response = requests.post(
         f"{api_url}/api/accounts",
@@ -73,7 +70,6 @@ def test_create_account_and_100_incoming_transfers(api_url):
     assert create_response.status_code == 201, "Account creation failed"
     assert create_time < TIMEOUT, f"Create took {create_time:.3f}s"
 
-    # Perform 100 incoming transfers
     for i in range(100):
         start_time = time.time()
         transfer_response = requests.post(
@@ -88,7 +84,6 @@ def test_create_account_and_100_incoming_transfers(api_url):
             f"Transfer took {transfer_time:.3f}s (iteration {i})"
         )
 
-    # Verify final balance
     get_response = requests.get(f"{api_url}/api/accounts/{pesel}", timeout=TIMEOUT)
     assert get_response.status_code == 200, "Failed to get account"
 
@@ -98,7 +93,6 @@ def test_create_account_and_100_incoming_transfers(api_url):
         f"Expected balance {expected_balance}, got {actual_balance}"
     )
 
-    # Cleanup
     requests.delete(f"{api_url}/api/accounts/{pesel}", timeout=TIMEOUT)
 
 
@@ -119,7 +113,6 @@ def test_create_1000_accounts_then_delete_all(api_url):
     num_accounts = 1000
     pesels = []
 
-    # Create 1000 accounts
     for i in range(num_accounts):
         pesel = f"{i:011d}"
         pesels.append(pesel)
@@ -135,14 +128,12 @@ def test_create_1000_accounts_then_delete_all(api_url):
         assert create_response.status_code == 201, f"Create failed at account {i}"
         assert create_time < TIMEOUT, f"Create took {create_time:.3f}s (account {i})"
 
-    # Verify all accounts exist
     get_all_response = requests.get(f"{api_url}/api/accounts", timeout=1.0)
     assert get_all_response.status_code == 200
     assert len(get_all_response.json()) == num_accounts, (
         f"Expected {num_accounts} accounts, found {len(get_all_response.json())}"
     )
 
-    # Delete all accounts
     for i, pesel in enumerate(pesels):
         start_time = time.time()
         delete_response = requests.delete(
@@ -153,7 +144,6 @@ def test_create_1000_accounts_then_delete_all(api_url):
         assert delete_response.status_code == 200, f"Delete failed at account {i}"
         assert delete_time < TIMEOUT, f"Delete took {delete_time:.3f}s (account {i})"
 
-    # Verify all accounts deleted
     get_all_response = requests.get(f"{api_url}/api/accounts", timeout=1.0)
     assert get_all_response.status_code == 200
     assert len(get_all_response.json()) == 0, "Not all accounts were deleted"

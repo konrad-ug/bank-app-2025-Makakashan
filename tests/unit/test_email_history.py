@@ -15,7 +15,6 @@ class TestPersonalAccountEmailHistory:
         self, mock_datetime, mock_smtp_class
     ):
         """Test that SMTPClient.send is called with correct parameters"""
-        # Arrange
         mock_datetime.now.return_value.strftime.return_value = "2025-01-08"
         mock_smtp_instance = MagicMock()
         mock_smtp_instance.send.return_value = True
@@ -25,10 +24,8 @@ class TestPersonalAccountEmailHistory:
         account.incoming_transfer(100)
         account.outgoing_transfer(50)
 
-        # Act
         result = account.send_history_via_email("test@example.com")
 
-        # Assert
         mock_smtp_instance.send.assert_called_once_with(
             "Account Transfer History 2025-01-08",
             "Personal account history: [100, -50]",
@@ -42,7 +39,6 @@ class TestPersonalAccountEmailHistory:
         self, mock_datetime, mock_smtp_class
     ):
         """Test that method returns True when email is sent successfully"""
-        # Arrange
         mock_datetime.now.return_value.strftime.return_value = "2025-01-08"
         mock_smtp_instance = MagicMock()
         mock_smtp_instance.send.return_value = True
@@ -51,10 +47,8 @@ class TestPersonalAccountEmailHistory:
         account = PersonalAccount("Jan", "Kowalski", 1000.0, "65010112345")
         account.incoming_transfer(500)
 
-        # Act
         result = account.send_history_via_email("test@example.com")
 
-        # Assert
         assert result is True
         assert mock_smtp_instance.send.call_count == 1
 
@@ -64,7 +58,6 @@ class TestPersonalAccountEmailHistory:
         self, mock_datetime, mock_smtp_class
     ):
         """Test that method returns False when email sending fails"""
-        # Arrange
         mock_datetime.now.return_value.strftime.return_value = "2025-01-08"
         mock_smtp_instance = MagicMock()
         mock_smtp_instance.send.return_value = False
@@ -73,10 +66,8 @@ class TestPersonalAccountEmailHistory:
         account = PersonalAccount("Jan", "Kowalski", 1000.0, "65010112345")
         account.outgoing_transfer(100)
 
-        # Act
         result = account.send_history_via_email("test@example.com")
 
-        # Assert
         assert result is False
         assert mock_smtp_instance.send.call_count == 1
 
@@ -84,7 +75,6 @@ class TestPersonalAccountEmailHistory:
     @patch("src.account.datetime")
     def test_send_history_with_empty_history(self, mock_datetime, mock_smtp_class):
         """Test sending email with empty account history"""
-        # Arrange
         mock_datetime.now.return_value.strftime.return_value = "2025-01-08"
         mock_smtp_instance = MagicMock()
         mock_smtp_instance.send.return_value = True
@@ -92,10 +82,8 @@ class TestPersonalAccountEmailHistory:
 
         account = PersonalAccount("Jan", "Kowalski", 1000.0, "65010112345")
 
-        # Act
         result = account.send_history_via_email("test@example.com")
 
-        # Assert
         mock_smtp_instance.send.assert_called_once_with(
             "Account Transfer History 2025-01-08",
             "Personal account history: []",
@@ -107,7 +95,6 @@ class TestPersonalAccountEmailHistory:
     @patch("src.account.datetime")
     def test_send_history_with_multiple_transfers(self, mock_datetime, mock_smtp_class):
         """Test sending email with multiple transfers in history"""
-        # Arrange
         mock_datetime.now.return_value.strftime.return_value = "2025-12-10"
         mock_smtp_instance = MagicMock()
         mock_smtp_instance.send.return_value = True
@@ -118,10 +105,8 @@ class TestPersonalAccountEmailHistory:
         account.outgoing_transfer(1)
         account.incoming_transfer(500)
 
-        # Act
         result = account.send_history_via_email("jan@example.com")
 
-        # Assert
         mock_smtp_instance.send.assert_called_once_with(
             "Account Transfer History 2025-12-10",
             "Personal account history: [100, -1, 500]",
@@ -140,7 +125,6 @@ class TestBusinessAccountEmailHistory:
         self, mock_datetime, mock_smtp_class, mock_validate_nip
     ):
         """Test that SMTPClient.send is called with correct parameters for business account"""
-        # Arrange
         mock_validate_nip.return_value = True
         mock_datetime.now.return_value.strftime.return_value = "2025-01-08"
         mock_smtp_instance = MagicMock()
@@ -152,10 +136,8 @@ class TestBusinessAccountEmailHistory:
         account.outgoing_transfer(1000)
         account.incoming_transfer(500)
 
-        # Act
         result = account.send_history_via_email("company@example.com")
 
-        # Assert
         mock_smtp_instance.send.assert_called_once_with(
             "Account Transfer History 2025-01-08",
             "Company account history: [5000, -1000, 500]",
@@ -170,7 +152,6 @@ class TestBusinessAccountEmailHistory:
         self, mock_datetime, mock_smtp_class, mock_validate_nip
     ):
         """Test that method returns True when email is sent successfully"""
-        # Arrange
         mock_validate_nip.return_value = True
         mock_datetime.now.return_value.strftime.return_value = "2025-01-08"
         mock_smtp_instance = MagicMock()
@@ -180,10 +161,8 @@ class TestBusinessAccountEmailHistory:
         account = BusinessAccount("Test Company", "1234567890")
         account.incoming_transfer(10000)
 
-        # Act
         result = account.send_history_via_email("company@example.com")
 
-        # Assert
         assert result is True
         assert mock_smtp_instance.send.call_count == 1
 
@@ -194,7 +173,6 @@ class TestBusinessAccountEmailHistory:
         self, mock_datetime, mock_smtp_class, mock_validate_nip
     ):
         """Test that method returns False when email sending fails"""
-        # Arrange
         mock_validate_nip.return_value = True
         mock_datetime.now.return_value.strftime.return_value = "2025-01-08"
         mock_smtp_instance = MagicMock()
@@ -204,10 +182,8 @@ class TestBusinessAccountEmailHistory:
         account = BusinessAccount("Test Company", "1234567890")
         account.incoming_transfer(5000)
 
-        # Act
         result = account.send_history_via_email("company@example.com")
 
-        # Assert
         assert result is False
         assert mock_smtp_instance.send.call_count == 1
 
@@ -218,7 +194,6 @@ class TestBusinessAccountEmailHistory:
         self, mock_datetime, mock_smtp_class, mock_validate_nip
     ):
         """Test sending email with empty business account history"""
-        # Arrange
         mock_validate_nip.return_value = True
         mock_datetime.now.return_value.strftime.return_value = "2025-01-08"
         mock_smtp_instance = MagicMock()
@@ -227,10 +202,8 @@ class TestBusinessAccountEmailHistory:
 
         account = BusinessAccount("Test Company", "1234567890")
 
-        # Act
         result = account.send_history_via_email("company@example.com")
 
-        # Assert
         mock_smtp_instance.send.assert_called_once_with(
             "Account Transfer History 2025-01-08",
             "Company account history: []",
@@ -245,7 +218,6 @@ class TestBusinessAccountEmailHistory:
         self, mock_datetime, mock_smtp_class, mock_validate_nip
     ):
         """Test that date format is correct (YYYY-MM-DD)"""
-        # Arrange
         mock_validate_nip.return_value = True
         mock_datetime.now.return_value.strftime.return_value = "2025-12-25"
         mock_smtp_instance = MagicMock()
@@ -255,10 +227,8 @@ class TestBusinessAccountEmailHistory:
         account = BusinessAccount("Test Company", "1234567890")
         account.incoming_transfer(1000)
 
-        # Act
         result = account.send_history_via_email("test@example.com")
 
-        # Assert
         assert (
             mock_smtp_instance.send.call_args[0][0]
             == "Account Transfer History 2025-12-25"
@@ -272,7 +242,6 @@ class TestBusinessAccountEmailHistory:
         self, mock_datetime, mock_smtp_class, mock_validate_nip
     ):
         """Test using call_args to verify method was called with correct arguments"""
-        # Arrange
         mock_validate_nip.return_value = True
         mock_datetime.now.return_value.strftime.return_value = "2025-01-08"
         mock_smtp_instance = MagicMock()
@@ -283,10 +252,8 @@ class TestBusinessAccountEmailHistory:
         account.incoming_transfer(5000)
         account.outgoing_transfer(1000)
 
-        # Act
         result = account.send_history_via_email("business@example.com")
 
-        # Assert
         call_args = mock_smtp_instance.send.call_args
         assert call_args[0][0] == "Account Transfer History 2025-01-08"
         assert call_args[0][1] == "Company account history: [5000, -1000]"
