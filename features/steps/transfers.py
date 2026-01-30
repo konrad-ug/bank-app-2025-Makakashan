@@ -4,7 +4,7 @@ from behave import *
 URL = "http://localhost:5000"
 
 
-@when('I make an incoming transfer of "{amount}" to account with pesel: "{pesel}"')
+@step('I make an incoming transfer of "{amount}" to account with pesel: "{pesel}"')
 def make_incoming_transfer(context, amount, pesel):
     json_body = {"amount": float(amount), "type": "incoming"}
     response = requests.post(URL + f"/api/accounts/{pesel}/transfer", json=json_body)
@@ -13,7 +13,7 @@ def make_incoming_transfer(context, amount, pesel):
     )
 
 
-@when('I make an outgoing transfer of "{amount}" from account with pesel: "{pesel}"')
+@step('I make an outgoing transfer of "{amount}" from account with pesel: "{pesel}"')
 def make_outgoing_transfer(context, amount, pesel):
     json_body = {"amount": float(amount), "type": "outgoing"}
     response = requests.post(URL + f"/api/accounts/{pesel}/transfer", json=json_body)
@@ -22,7 +22,7 @@ def make_outgoing_transfer(context, amount, pesel):
     )
 
 
-@when('I make an express transfer of "{amount}" from account with pesel: "{pesel}"')
+@step('I make an express transfer of "{amount}" from account with pesel: "{pesel}"')
 def make_express_transfer(context, amount, pesel):
     json_body = {"amount": float(amount), "type": "express"}
     response = requests.post(URL + f"/api/accounts/{pesel}/transfer", json=json_body)

@@ -107,7 +107,6 @@ def home():
 @app.route("/api/accounts", methods=["POST"])
 def create_account():
     data = request.get_json()
-    print(f"Create account request: {data}")
     account = PersonalAccount(
         first_name=data["name"],
         last_name=data["surname"],
@@ -125,7 +124,6 @@ def create_account():
 
 @app.route("/api/accounts", methods=["GET"])
 def get_all_accounts():
-    print("Get all accounts request received")
     accounts = registry.get_all_accounts()
     accounts_data = [
         {
@@ -141,14 +139,12 @@ def get_all_accounts():
 
 @app.route("/api/accounts/count", methods=["GET"])
 def get_account_count():
-    print("Get account count request received")
     count = registry.get_account_count()
     return jsonify({"count": count}), 200
 
 
 @app.route("/api/accounts/<pesel>", methods=["GET"])
 def get_account_by_pesel(pesel):
-    print(f"Get account by PESEL request: {pesel}")
     account = registry.find_account_by_pesel(pesel)
 
     if account is None:
@@ -166,7 +162,6 @@ def get_account_by_pesel(pesel):
 
 @app.route("/api/accounts/<pesel>", methods=["PUT"])
 def update_account(pesel):
-    print(f"Update account by PESEL request: {pesel}")
     data = request.get_json()
 
     account = registry.update_account(
@@ -188,8 +183,6 @@ def update_account(pesel):
 
 @app.route("/api/accounts/<pesel>", methods=["DELETE"])
 def delete_account(pesel):
-    print(f"Delete account by PESEL request: {pesel}")
-
     success = registry.delete_account(pesel)
 
     if not success:
@@ -200,8 +193,6 @@ def delete_account(pesel):
 
 @app.route("/api/accounts/<pesel>/transfer", methods=["POST"])
 def transfer(pesel):
-    print(f"Transfer request for PESEL: {pesel}")
-
     # Find account
     account = registry.find_account_by_pesel(pesel)
     if account is None:
@@ -262,7 +253,6 @@ def transfer(pesel):
 
 @app.route("/api/accounts/save", methods=["POST"])
 def save_accounts_to_persistence():
-    print("Save accounts to persistence request received")
     payload = request.get_json(silent=True)
     overrides = _extract_persistence_overrides(payload)
     try:
@@ -278,7 +268,6 @@ def save_accounts_to_persistence():
 
 @app.route("/api/accounts/load", methods=["POST"])
 def load_accounts_from_persistence():
-    print("Load accounts from persistence request received")
     payload = request.get_json(silent=True)
     overrides = _extract_persistence_overrides(payload)
     try:

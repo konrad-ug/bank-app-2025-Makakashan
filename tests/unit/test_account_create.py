@@ -37,6 +37,7 @@ class TestAccount:
             ("06241114012", "INVALID", 0.0, []),
             ("06241114012", "PROM_1234", 0.0, []),
             ("06241114012", "PROM_123456", 0.0, []),
+            ("123", "PROM_123", 0.0, []),  # Short PESEL - should not get promo
         ],
     )
     def test_account_promo_code_logic(

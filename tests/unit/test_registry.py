@@ -77,11 +77,11 @@ class TestAccountRegistry:
         with pytest.raises(DuplicatePeselError):
             registry.add_account(account2)
 
-        # Count should remain the same
+
         assert registry.get_account_count() == initial_count
         assert registry.get_account_count() == 1
 
-        # Only first account should be in registry
+
         found = registry.find_account_by_pesel("80010112345")
         assert found.first_name == "Jan"
         assert found.last_name == "Kowalski"
@@ -103,7 +103,7 @@ class TestAccountRegistry:
         account = PersonalAccount("Jan", "Kowalski", 100.0, "80010112345")
         registry.add_account(account)
 
-        # Update should work fine
+
         updated = registry.update_account("80010112345", first_name="Janusz")
         assert updated is not None
         assert updated.first_name == "Janusz"
@@ -113,16 +113,26 @@ class TestAccountRegistry:
         account1 = PersonalAccount("Jan", "Kowalski", 100.0, "80010112345")
         registry.add_account(account1)
 
-        # Delete the account
+
         registry.delete_account("80010112345")
 
-        # Should be able to add new account with same PESEL
+
         account2 = PersonalAccount("Anna", "Nowak", 200.0, "80010112345")
         registry.add_account(account2)
 
         assert registry.get_account_count() == 1
         found = registry.find_account_by_pesel("80010112345")
         assert found.first_name == "Anna"
+
+    def test_update_account_not_found(self, registry):
+        """Test updating non-existent account returns None"""
+        result = registry.update_account("99999999999", first_name="Test")
+        assert result is None
+
+    def test_delete_account_not_found(self, registry):
+        """Test deleting non-existent account returns False"""
+        result = registry.delete_account("99999999999")
+        assert result is False
 
 
 class TestAccountRegistryWithMockedRepository:
@@ -163,7 +173,7 @@ class TestAccountRegistryWithMockedRepository:
         with pytest.raises(DuplicatePeselError):
             registry.add_account(duplicate)
 
-        # Repository add should not be called for duplicate
+
         mock_repo.add.assert_not_called()
 
     def test_find_account_by_pesel_calls_repository(self):
@@ -305,7 +315,7 @@ class TestAccountRegistryWithMongoMock:
         registry = AccountRegistry(repository=repo)
         yield registry
 
-        # Cleanup
+
         repo.clear()
         client.close()
 
@@ -340,7 +350,7 @@ class TestAccountRegistryWithMongoMock:
         assert updated is not None
         assert updated.first_name == "Janusz"
 
-        # Verify persistence
+
         found = mongo_registry.find_account_by_pesel("80010112345")
         assert found.first_name == "Janusz"
 

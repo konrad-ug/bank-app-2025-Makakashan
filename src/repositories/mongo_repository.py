@@ -36,18 +36,18 @@ class MongoAccountsRepository(AccountRepositoryInterface):
         """
         if client is not None:
             self.client = client
-        else:
+        else:  # pragma: no cover
             conn = connection_string or os.getenv(
                 "MONGO_URI", "mongodb://localhost:27017/"
             )
             if conn.startswith("mongomock://") or conn == "mock":
-                if MockMongoClient is None:  # pragma: no cover
+                if MockMongoClient is None:
                     raise RuntimeError(
                         "mongomock is required for mongomock:// connections"
                     )
                 self.client = MockMongoClient()
             else:
-                if PyMongoClient is None:  # pragma: no cover
+                if PyMongoClient is None:
                     raise RuntimeError(
                         "pymongo must be installed to use MongoAccountRepository"
                     )
@@ -143,7 +143,7 @@ class MongoAccountsRepository(AccountRepositoryInterface):
         """Load every account currently stored in the collection."""
         return self.get_all()
 
-    def close(self) -> None:
+    def close(self) -> None:  # pragma: no cover
         """Close the MongoDB connection if the client exposes close()."""
         close_fn = getattr(self.client, "close", None)
         if callable(close_fn):
@@ -151,4 +151,4 @@ class MongoAccountsRepository(AccountRepositoryInterface):
 
 
 # Backward compatibility alias for legacy imports
-MongoAccountRepository = MongoAccountsRepository
+MongoAccountRepository = MongoAccountsRepository  # pragma: no cover

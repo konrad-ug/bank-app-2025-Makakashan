@@ -143,6 +143,14 @@ class TestMongoAccountRepository:
         updated = mongo_repo.update("99999999999", first_name="Test")
         assert updated is None
 
+    def test_update_with_no_changes(self, mongo_repo, account_jan):
+        """Test updating with both parameters None returns existing account"""
+        mongo_repo.add(account_jan)
+        updated = mongo_repo.update("80010112345", first_name=None, last_name=None)
+        assert updated is not None
+        assert updated.first_name == "Jan"
+        assert updated.last_name == "Kowalski"
+
     def test_delete_account(self, mongo_repo, account_jan, account_anna):
         """Test deleting an account"""
         mongo_repo.add(account_jan)
@@ -302,6 +310,12 @@ class TestMongoAccountRepository:
         mongo_repo.add(acc3)
 
         assert mongo_repo.count() == 2
+
+    def test_save_all_empty_list(self, mongo_repo):
+        """Test saving empty list returns 0"""
+        count = mongo_repo.save_all([])
+        assert count == 0
+        assert mongo_repo.count() == 0
 
     def test_save_all_replaces_existing_accounts(
         self, mongo_repo, account_jan, account_anna, account_piotr

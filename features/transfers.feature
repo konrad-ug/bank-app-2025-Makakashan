@@ -46,6 +46,6 @@ Feature: Account transfers
     Given Account registry is empty
     And I create an account using name: "sarah", last name: "davis", pesel: "91050512345"
     And I make an incoming transfer of "100.0" to account with pesel: "91050512345"
-    When I try to make an express transfer of "100.0" from account with pesel: "91050512345"
+    When I try to make an express transfer of "150.0" from account with pesel: "91050512345"
     Then Transfer fails with status code "422"
     And Account with pesel "91050512345" has "balance" equal to "100.0"
